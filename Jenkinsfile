@@ -60,7 +60,7 @@ pipeline {
           steps {
               dependencyCheckPublisher(
                   pattern: 'dependency-check-report/dependency-check-report.xml',
-                  stopbuild: true
+                  stopBuild: true
        )
     }
 }       
