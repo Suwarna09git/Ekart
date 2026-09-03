@@ -1,45 +1,31 @@
 pipeline {
     agent any
-
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        NVD_API_KEY = credentials('nvd-api-key')  // Jenkins secret text credential
+        NVD_API_KEY = credentials('nvd-api-key')
         MAVEN_HOME = tool 'maven3'
         PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
     }
-
     tools {
         maven 'maven3'
         jdk 'jdk-17'
     }
-    stages {
-        stage('Build') {
-            steps {
-                sh 'mvn clean install'
-            }
-        }
-    }
-
     stages {
         stage('git checkout') {
             steps {
                 git branch: 'master', url: 'https://github.com/Suwarna09git/Ekart.git'
             }
         }
-    }
-
         stage('compile') {
             steps {
                 sh "mvn compile"
             }
         }
-
         stage('unit tests') {
             steps {
                 sh "mvn test -DskipTests=true"
             }
         }
-
         stage('SonarQube analysis') {
             steps {
                 withSonarQubeEnv('sonar-scanner') {
@@ -50,72 +36,68 @@ pipeline {
                 }
             }
         }
-
-       stage('OWASP Dependency Check') {
-    steps {
-       withCredentials([
-           string(
-            credentialsId:  'nvd-api-key',
-               variable: 'NVD_API_KEY'
-        )
-      ]){     
-             dependencyCheck(
-            additionalArguments: "--nvdApiKey=${NVD_API_KEY} --scan . --format XML --format HTML --out dependency-check-report",
-                 odcInstallation: 'DC'
-        )
-     }
-   }
-}
-      stage('Publish Dependency Check Report') {
-          steps {
-              dependencyCheckPublisher(
-                  pattern: '**/dependency-check-report.xml',
-                  stopBuild: true
-       )
-    }
-}       
-                  stage('Build') {
+        stage('OWASP Dependency Check') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
+                ]) {
+                    dependencyCheck(
+                        additionalArguments: "--nvdApiKey=${NVD_API_KEY} --scan . --format XML --format HTML --out dependency-check-report",
+                        odcInstallation: 'DC'
+                    )
+                }
+            }
+        }
+        stage('Publish Dependency Check Report') {
+            steps {
+                dependencyCheckPublisher(
+                    pattern: '**/dependency-check-report.xml',
+                    stopBuild: true
+                )
+            }
+        }
+        stage('Build') {
             steps {
                 sh "mvn package -DskipTests=true"
             }
         }
-
         stage('deploy to Nexus') {
             steps {
                 withMaven(globalMavenSettingsConfig: 'global-maven', jdk: 'jdk-17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
                     sh "mvn deploy -DskipTests=true"
                 }
             }
-    
-          stage('build and Tag docker image') {
+        }
+        stage('build and Tag docker image') {
             steps {
                 script {
-                        sh "docker build -t suwarna2120/ekart:latest -f docker/Dockerfile ."
-                    }
-            }
-        }
-
-        stage('Push image to Hub'){
-            steps{
-                script{
-                   withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
-                   sh 'docker login -u suwarna2120 -p ${dockerhubpwd}'}
-                   sh 'docker push suwarna2120/ekart:latest'
+                    sh "docker build -t suwarna2120/ekart:latest -f docker/Dockerfile ."
                 }
             }
         }
-        stage('EKS and Kubectl configuration'){
-            steps{
-                script{
+        stage('Push image to Hub') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
+                        sh 'docker login -u suwarna2120 -p ${dockerhubpwd}'
+                    }
+                    sh 'docker push suwarna2120/ekart:latest'
+                }
+            }
+        }
+        stage('EKS and Kubectl configuration') {
+            steps {
+                script {
                     sh 'aws eks update-kubeconfig --region ap-south-1 --name project-cluster'
                 }
             }
         }
-        stage('Deploy to k8s'){
-            steps{
-                script{
+        stage('Deploy to k8s') {
+            steps {
+                script {
                     sh 'kubectl apply -f deploymentservice.yml'
                 }
             }
         }
     }
+}
