@@ -61,8 +61,9 @@ pipeline {
               dependencyCheckPublisher(
                   pattern: 'dependency-check-report/dependency-check-report.xml',
                   stopbuild: true
-       
-                  
+       )
+    }
+}       
                   stage('Build') {
             steps {
                 sh "mvn package -DskipTests=true"
