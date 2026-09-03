@@ -18,6 +18,7 @@ pipeline {
                 sh 'mvn clean install'
             }
         }
+    }
 
     stages {
         stage('git checkout') {
@@ -85,10 +86,8 @@ pipeline {
                     sh "mvn deploy -DskipTests=true"
                 }
             }
-        }
-        
-
-        stage('build and Tag docker image') {
+    
+          stage('build and Tag docker image') {
             steps {
                 script {
                         sh "docker build -t suwarna2120/ekart:latest -f docker/Dockerfile ."
@@ -120,5 +119,3 @@ pipeline {
             }
         }
     }
-
-}
