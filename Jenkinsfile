@@ -4,12 +4,20 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
         NVD_API_KEY = credentials('nvd-api-key')  // Jenkins secret text credential
+        MAVEN_HOME = tool 'maven3'
+        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
     }
 
     tools {
         maven 'maven3'
         jdk 'jdk-17'
     }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
 
     stages {
         stage('git checkout') {
@@ -59,7 +67,7 @@ pipeline {
       stage('Publish Dependency Check Report') {
           steps {
               dependencyCheckPublisher(
-                  pattern: 'dependency-check-report/dependency-check-report.xml',
+                  pattern: '**/dependency-check-report.xml',
                   stopBuild: true
        )
     }
