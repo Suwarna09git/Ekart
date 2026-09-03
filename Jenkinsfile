@@ -25,6 +25,7 @@ pipeline {
                 git branch: 'master', url: 'https://github.com/Suwarna09git/Ekart.git'
             }
         }
+    }
 
         stage('compile') {
             steps {
