@@ -43,20 +43,27 @@ pipeline {
 
        stage('OWASP Dependency Check') {
     steps {
-        dependencyCheck(
-            additionalArguments: '''--scan . --format HTML --format XML --prettyPrint''',
-            odcInstallation: 'DC'
-            nvdCredentialsId:  'nvd-api-key'
+       withCredentials([
+           string(
+            credentialsId:  'nvd-api-key',
+               variable: 'NVD_API_KEY'
         )
-
-        dependencyCheckPublisher(
-            pattern: 'dependency-check-report.xml'
-            stopBuild: true
+      ]){     
+             dependencyCheck(
+            additionalArguments: "--nvdApiKey=${NVD_API_KEY} --scan . --format XML --format HTML --out dependency-check-report",
+                 odcInstallation: 'DC'
         )
-    }
+     }
+   }
 }
-
-        stage('Build') {
+      stage('Publish Dependency Check Report') {
+          steps {
+              dependencyCheckPublisher(
+                  pattern: 'dependency-check-report/dependency-check-report.xml',
+                  stopbuild: true
+       
+                  
+                  stage('Build') {
             steps {
                 sh "mvn package -DskipTests=true"
             }
